@@ -1,20 +1,46 @@
-import 'package:flutter/material.dart';
-import 'models/post_model.dart';
-import 'services/post_service.dart';
+import 'package:flutter/material.dart'; 
+import 'package:pertemuan8_2306023/provider/post_provider.dart'; 
+import 'package:provider/provider.dart'; 
+import 'models/post_model.dart'; 
+import 'services/post_service.dart'; 
+import 'provider/pict_provider.dart';
 import 'secondpage.dart';
+
 
 void main() {
   runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: "Bebek Goreng H. Slamet(Asli)",
-      home: MyApp(),
-    ),
+    MultiProvider(
+      providers: [
+        
+        ChangeNotifierProvider(
+          create: (_) => PostProvider(),
+        ),
+
+        ChangeNotifierProvider(
+          create: (_) => PictProvider(),
+        ),
+
+      ],
+      child: const MyApp(),
+    )
   );
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: "Post App",
+      home: const HomeScreen(),
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -30,32 +56,34 @@ class MyApp extends StatelessWidget {
         ),
         backgroundColor: Colors.blueAccent,
       ),
+
       body: const PostPage(),
+
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+
           FloatingActionButton(
             heroTag: "btn1",
             backgroundColor: Colors.blue,
-            child: Icon(Icons.home),
+            child: const Icon(Icons.home),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => MyApp()),
-              );
+              Navigator.popUntil(context, (route) => route.isFirst);
             },
           ),
 
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
 
           FloatingActionButton(
             heroTag: "btn2",
             backgroundColor: Colors.green,
-            child: Icon(Icons.image),
+            child: const Icon(Icons.image),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => SecondPage()),
+                MaterialPageRoute(
+                  builder: (context) => const SecondPage(),
+                ),
               );
             },
           ),
@@ -73,62 +101,66 @@ class PostPage extends StatefulWidget {
 }
 
 class _PostPageState extends State<PostPage> {
-  late Future<List<PostModel>> futurePosts;
 
   @override
   void initState() {
     super.initState();
-    futurePosts = PostService.getPost();
+
+    Future.microtask(() {
+      context.read<PostProvider>().getPosts();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<PostModel>>(
-      future: futurePosts,
-      builder: (context, snapshot) {
-        // jika data berhasil diambil
-        if (snapshot.hasData) {
-          final posts = snapshot.data!;
 
-          // tampilkan data dalam bentuk ListView
-          return ListView.builder(
-            itemCount: posts.length,
-            itemBuilder: (context, index) {
-              final post = posts[index];
+    final provider = context.watch<PostProvider>();
 
-              return Card(
-                margin: const EdgeInsets.all(10),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.title,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+    if (provider.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
-                      const SizedBox(height: 10),
+    if (provider.posts.isEmpty) {
+      return const Center(
+        child: Text("Tidak ada data"),
+      );
+    }
 
-                      Text(post.body),
-                    ],
+    return ListView.builder(
+      itemCount: provider.posts.length,
+      itemBuilder: (context, index) {
+
+        final post = provider.posts[index];
+
+        return Card(
+          margin: const EdgeInsets.all(10),
+          elevation: 4,
+
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                Text(
+                  post.title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              );
-            },
-          );
-        }
-        // jika terjadi error
-        else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-        // jika masih loading
-        else {
-          return const Center(child: CircularProgressIndicator());
-        }
+
+                const SizedBox(height: 10),
+
+                Text(post.body),
+
+              ],
+            ),
+          ),
+        );
       },
     );
   }

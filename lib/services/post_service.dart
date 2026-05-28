@@ -4,7 +4,7 @@ import '../models/post_model.dart';
 
 
 class PostService {
-  static Future<List<PostModel>>getPost() async {
+  Future<List<PostModel>>getPost() async {
     final response = await http.get(
       Uri.parse('https://jsonplaceholder.typicode.com/posts')
     );
